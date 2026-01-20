@@ -73,8 +73,29 @@ An AI-powered clinical decision support system for stroke MRI analysis, combinin
 3. **Model Checkpoint**:
    Place `checkpoint_best.pth` (nnU-Net trained model) in `src/model/`
 
-4. **Data**:
+4. **Arterial Atlas** (for vascular territory mapping):
+   
+   Download the Johns Hopkins Arterial Atlas:
+   ```bash
+   # Create directory
+   mkdir -p data/atlases/arterial_atlas/data
+   
+   # Download from Johns Hopkins (requires registration)
+   # URL: https://www.nitrc.org/projects/arterialatlas
+   # Or use direct link if available:
+   # wget -O data/atlases/arterial_atlas/data/ArterialAtlas.nii https://...
+   ```
+   
+   Required files in `data/atlases/arterial_atlas/data/`:
+   - `ArterialAtlas.nii` (30 sub-territories)
+   - `ArterialAtlas_level2.nii` (4 major territories)
+   - `ArterialAtlasLabels.txt`
+   
+   > **Note**: Harvard-Oxford atlas (for anatomical location) is auto-downloaded by `nilearn`.
+
+5. **Data**:
    Set `ISLES2022_PATH` in `src/config.py` or use environment variable.
+
 
 ## Usage
 
