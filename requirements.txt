@@ -13,3 +13,5 @@ streamlit>=1.30.0
 antspyx>=0.6.0
 nilearn>=0.10.0
 nnunetv2>=2.5.0
+pandas>=2.0.0
+tqdm>=4.65.0

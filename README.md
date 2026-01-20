@@ -62,7 +62,6 @@ An AI-powered clinical decision support system for stroke MRI analysis, combinin
    python3.11 -m venv .venv311
    source .venv311/bin/activate
    pip install -r requirements.txt
-   pip install nnunetv2  # For segmentation
    ```
 
 2. **Hugging Face Auth** (for MedGemma):
