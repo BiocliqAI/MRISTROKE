@@ -1,73 +1,117 @@
-# MedGemma Stroke MRI Reporting Pipeline
+# MRI Stroke Analysis Pipeline
 
-An AI-assisted clinical reasoning tool using **MedGemma 1.5 4B** to generate radiologist-style text reports from ISLES2022 brain MRI data.
+An AI-powered clinical decision support system for stroke MRI analysis, combining **nnU-Net segmentation**, **deterministic staging**, **atlas-based localization**, and **MedGemma** for natural language report generation.
 
 ## ⚠️ Disclaimer
-**NOT FOR CLINICAL USE.** This tool is a demonstration of AI-assisted reporting. It is not a medical device and should not be used for diagnosis or treatment decisions. All outputs must be verified by a board-certified radiologist.
+**NOT FOR CLINICAL USE.** This is a research tool for AI-assisted reporting. All outputs must be verified by a board-certified radiologist.
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│               INPUT: DWI, ADC, FLAIR                        │
+└─────────────────────────┬───────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│           nnU-Net 3D Segmentation                           │
+│           (Trained on ISLES-2022, Dice ~0.82)               │
+└─────────────────────────┬───────────────────────────────────┘
+                          │
+          ┌───────────────┼───────────────┐
+          │               │               │
+          ▼               ▼               ▼
+   ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
+   │ Deterministic│ │ Atlas-Based  │ │ Rule-Based   │
+   │ Staging      │ │ Localization │ │ Safety Checks│
+   │ (ADC/FLAIR)  │ │ (Territory)  │ │              │
+   └──────────────┘ └──────────────┘ └──────────────┘
+          │               │               │
+          └───────────────┴───────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│           MedGemma 1.5 Report Generation                    │
+│           (Text-only, grounded to deterministic findings)   │
+└─────────────────────────────────────────────────────────────┘
+```
 
 ## Features
-- **Dataset Support**: Native support for ISLES2022 BIDS structure (DWI, ADC, FLAIR).
-- **Intelligent Slice Selection**: Heuristic-based selection of most relevant slices from DWI.
-- **ADC Confirmation Gate**: Validates "restricted diffusion" by cross-referencing DWI hyperintensity with ADC hypointensity.
-- **MedGemma 1.5 Integration**: Uses Google's open weights medical VLM for image analysis.
-- **Radiologist-Style Output**: Generates structured text reports with findings and impressions.
+
+| Component | Description |
+|:----------|:------------|
+| **nnU-Net Segmentation** | 3D full-resolution segmentation (ResidualEncoderUNet) |
+| **Deterministic Staging** | ADC/FLAIR ratio-based acute/subacute/chronic classification |
+| **Territory Localization** | Johns Hopkins Arterial Atlas (MCA, ACA, PCA, VB) |
+| **Anatomical Location** | Harvard-Oxford Atlas (lobe, subcortical structures) |
+| **Safety Checks** | Rule-based DWI/ADC mismatch detection for uncertain cases |
+| **Report Generation** | MedGemma VLM for natural language reports |
+
+## Validation Results (50 cases)
+
+| Metric | Value |
+|:-------|:------|
+| Mean Dice | 0.78 |
+| Median Dice | 0.82 |
+| Detection Rate | 98% |
 
 ## Setup
 
 1. **Environment**:
    ```bash
-   python3 -m venv .venv
-   source .venv/bin/activate
+   python3.11 -m venv .venv311
+   source .venv311/bin/activate
    pip install -r requirements.txt
+   pip install nnunetv2  # For segmentation
    ```
 
-2. **Hugging Face Auth**:
-   MedGemma 1.5 is gated. You must accept the license at [huggingface.co/google/medgemma-1.5-4b-it](https://huggingface.co/google/medgemma-1.5-4b-it) and log in:
+2. **Hugging Face Auth** (for MedGemma):
    ```bash
    huggingface-cli login
    ```
 
-3. **Data**:
-   Ensure ISLES2022 dataset is located at `/Users/rengarajanbashyam/Desktop/mristroke/ISLES-2022` (or set via `src/config.py`).
+3. **Model Checkpoint**:
+   Place `checkpoint_best.pth` (nnU-Net trained model) in `src/model/`
+
+4. **Data**:
+   Set `ISLES2022_PATH` in `src/config.py` or use environment variable.
 
 ## Usage
 
-Run the pipeline on a specific case:
-
+### Full Pipeline
 ```bash
-python src/main.py --case sub-strokecase0001 --save
+python src/pipeline_deterministic.py --case sub-strokecase0001
 ```
 
-### Interactive Dashboard (New)
-To scroll through images, toggle masks, and verify AI results interactively:
+### Interactive Dashboard
 ```bash
 streamlit run src/app.py
 ```
-This opens a web interface where you can:
-- Select cases.
-- Scroll slices synchronously.
-- View Ground Truth overlays.
-- Trigger AI generation.
 
-Reports are saved to `reports/`.
+## Modules
 
-## Architecture
-
-- **`src/data`**: NIfTI loading (`nibabel`) and image preprocessing.
-- **`src/model`**: MedGemma inference wrapper and prompt engineering.
-- **`src/utils`**: Clinical logic checks (e.g., ADC confirmation).
-- **`src/report`**: Output parsing and report templating.
+| Module | Purpose |
+|:-------|:--------|
+| `src/model/segmentation.py` | nnU-Net inference wrapper |
+| `src/model/medgemma.py` | MedGemma VLM for reports |
+| `src/staging/deterministic.py` | ADC/FLAIR ratio staging |
+| `src/territory/` | Atlas-based localization |
+| `src/safety/rule_checks.py` | DWI/ADC safety checks |
+| `src/report/` | Report templating |
 
 ## Scope & Limitations
 
 ### In Scope
-- Qualitative infarct detection
-- Stroke aging classification (Acute/Subacute/Chronic)
-- Anatomical localization (Lobe/Hemisphere)
-- DWI-FLAIR mismatch assessment
+- ✅ Lesion detection via 3D segmentation
+- ✅ Stroke staging (Acute/Subacute/Chronic)
+- ✅ Vascular territory mapping
+- ✅ Anatomical localization
+- ✅ Safety checks for small/missed lesions
 
-### Out of Scope (Anti-Goals)
-- Segmentation masks (using heuristics instead)
-- Quantitative volume measurements
-- ASPECTS scoring
-- Treatment recommendations (tPA/Thrombectomy)
+### Out of Scope
+- ❌ Quantitative volume measurements
+- ❌ ASPECTS scoring
+- ❌ Treatment recommendations
+
+## License
+Research use only. Not for clinical diagnosis.
