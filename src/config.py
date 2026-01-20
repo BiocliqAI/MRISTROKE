@@ -1,16 +1,27 @@
 import os
 from pathlib import Path
+import torch
 
 # Project Paths
 PROJECT_ROOT = Path(__file__).parent.parent
 DATASET_ROOT = os.environ.get("ISLES2022_PATH", "/Users/rengarajanbashyam/Desktop/mristroke/ISLES-2022")
 OUTPUT_DIR = PROJECT_ROOT / "reports"
 
+# Device Auto-Detection
+def get_device():
+    """Auto-detect the best available device: CUDA > MPS > CPU"""
+    if torch.cuda.is_available():
+        return "cuda"
+    elif torch.backends.mps.is_available():
+        return "mps"
+    else:
+        return "cpu"
+
 # Model Settings
 MODEL_ID = "google/medgemma-1.5-4b-it" 
-DEVICE = "mps"  # Metal Performance Shaders for Apple Silicon
-USE_QUANTIZATION = False # 4-bit quantization can be unstable on MPS, defaulting to full/16-bit
-TORCH_DTYPE = "bfloat16" # Recommended for Gemma on MPS
+DEVICE = get_device()  # Auto-detect: CUDA, MPS, or CPU
+USE_QUANTIZATION = False  # 4-bit quantization can be unstable on MPS
+TORCH_DTYPE = "bfloat16"  # Recommended for Gemma models
 
 # Data Processing
 SLICES_PER_CASE = 3 # Top N slices to select

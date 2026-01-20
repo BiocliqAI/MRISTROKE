@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 class MedGemmaPredictor:
     def __init__(self):
-        self.device = torch.device(DEVICE) if torch.backends.mps.is_available() else torch.device("cpu")
+        self.device = torch.device(DEVICE)  # Auto-detected in config.py
         self.dtype = getattr(torch, TORCH_DTYPE)
         
         logger.info(f"Loading MedGemma {MODEL_ID} on {self.device} with {self.dtype}...")
